@@ -1,4 +1,4 @@
-package odin
+package center
 
 import (
 	"fmt"

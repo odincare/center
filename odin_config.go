@@ -1,4 +1,4 @@
-package odin
+package center
 
 import (
 	"encoding/json"
@@ -27,15 +27,17 @@ type ConfigParam struct {
 
 func NewOdinCenter(opts ...options.Option) *OdinCenter {
 	if len(opts) == 0 {
-		var ConfigAddr, NamespaceID string
+		var ConfigAddr, NamespaceID, LogLevel string
 		ConfigAddr = os.Getenv("CONF_ADDR")
 		NamespaceID = os.Getenv("NAMESPACE_ID")
+		LogLevel = os.Getenv("LOG_LEVEL")
 		if ConfigAddr == "" || NamespaceID == "" {
 			panic("初始化配置错误")
 			return nil
 		}
 		opts = append(opts, options.Addrs(ConfigAddr))
 		opts = append(opts, options.NameSpaceId(NamespaceID))
+		opts = append(opts, options.LogLevel(LogLevel))
 	}
 	conf := options.OptionInit(opts...)
 	return &OdinCenter{

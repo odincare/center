@@ -1,4 +1,4 @@
-package odin
+package center
 
 import (
 	"github.com/nacos-group/nacos-sdk-go/vo"
