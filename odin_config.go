@@ -2,12 +2,14 @@ package center
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/common/logger"
 	"github.com/nacos-group/nacos-sdk-go/vo"
 	"github.com/odincare/center/options"
+	"gopkg.in/yaml.v2"
 	"os"
 	"reflect"
 )
@@ -60,16 +62,67 @@ func (o *OdinCenter) PublishConfig(param ConfigParam) error {
 }
 
 //获取配置
-func (o *OdinCenter) GetConfig(param ConfigParam) string {
+//func (o *OdinCenter) GetConfig(param ConfigParam) string {
+//	sParam := vo.ConfigParam{}
+//	assignParam(&sParam, &param)
+//
+//	result, err := o.cClient.GetConfig(sParam)
+//	if err != nil {
+//		logger.Error("获取配置失败,错误信息:", err)
+//		return ""
+//	}
+//	return result
+//}
+func (o *OdinCenter) GetConfig(param ConfigParam, obj interface{}) (err error) {
 	sParam := vo.ConfigParam{}
 	assignParam(&sParam, &param)
 
 	result, err := o.cClient.GetConfig(sParam)
 	if err != nil {
-		logger.Error("获取配置失败,错误信息:", err)
-		return ""
+		logger.Error()
+		return errors.New("获取配置失败,错误信息:" + err.Error())
 	}
-	return result
+
+	err = yaml.Unmarshal([]byte(result), obj)
+	if err != nil {
+		return errors.New("解析配置失败,错误信息:" + err.Error())
+	}
+
+	// 获取入参的类型
+	t := reflect.TypeOf(obj)
+
+	// 入参类型校验
+	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Struct {
+		return errors.New("参数应该为结构体指针")
+	}
+	v := reflect.ValueOf(obj).Elem()
+
+	err = checkRequired(v)
+
+	return err
+}
+func checkRequired(v reflect.Value) error {
+
+	for i := 0; i < v.NumField(); i++ {
+
+		fieldInfo := v.Type().Field(i)
+		label := fieldInfo.Tag.Get("required")
+		name := fieldInfo.Name
+		sub := v.FieldByName(name)
+
+		if sub.Kind() != reflect.Struct && sub.String() == "" && label == "true" {
+			return errors.New("配置参数有误:" + name + " is undefined or empty")
+		}
+
+		if sub.Kind() == reflect.Struct {
+			err := checkRequired(sub)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 //监听配置
