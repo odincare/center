@@ -73,6 +73,7 @@ func (o *OdinCenter) PublishConfig(param ConfigParam) error {
 //	}
 //	return result
 //}
+
 func (o *OdinCenter) GetConfig(param ConfigParam, obj interface{}) (err error) {
 	sParam := vo.ConfigParam{}
 	assignParam(&sParam, &param)
@@ -82,6 +83,16 @@ func (o *OdinCenter) GetConfig(param ConfigParam, obj interface{}) (err error) {
 		logger.Error()
 		return errors.New("获取配置失败,错误信息:" + err.Error())
 	}
+	t := reflect.TypeOf(obj)
+	if t.Elem().Kind() == reflect.String {
+		reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(result))
+		return nil
+	}
+
+	// 入参类型校验
+	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Struct {
+		return errors.New("参数应该为结构体指针")
+	}
 
 	err = yaml.Unmarshal([]byte(result), obj)
 	if err != nil {
@@ -89,12 +100,7 @@ func (o *OdinCenter) GetConfig(param ConfigParam, obj interface{}) (err error) {
 	}
 
 	// 获取入参的类型
-	t := reflect.TypeOf(obj)
 
-	// 入参类型校验
-	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Struct {
-		return errors.New("参数应该为结构体指针")
-	}
 	v := reflect.ValueOf(obj).Elem()
 
 	err = checkRequired(v)
